@@ -1,0 +1,51 @@
+# Documento de contexto interno (no se publica con el entregable)
+context.md
+
+# Backups y dumps locales
+*.sql.gz
+*.dump
+*.bak
+*.tar
+*.tar.gz
+*.zip
+backups/
+dumps/
+
+# Logs
+*.log
+mysql-bin.*
+mysql-relay-bin.*
+
+# Credenciales y secretos
+*.env
+*.env.*
+.env
+.env.*
+*.pem
+*.key
+*.crt
+credentials*.json
+secrets/
+
+# Sistemas operativos
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cursor / agentes
+.cursor/
+.cursorindexingignore
+
+# Cache temporal
+__pycache__/
+*.pyc
+.tmp/
+tmp/
+node_modules/
