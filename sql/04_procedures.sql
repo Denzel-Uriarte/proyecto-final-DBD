@@ -1,36 +1,10 @@
--- =====================================================================
--- Hotel Alpheus - Stored Procedures (lineamientos 3a-3j)
--- CETYS Universidad - Diseno de Bases de Datos 2026-1, Proyecto Final
--- =====================================================================
--- 10 stored procedures mapeados 1:1 al lineamiento del PDF.
---
--- ORDEN DE EJECUCION RECOMENDADO:
---   1) sql/01_schema.sql
---   2) sql/02_seed.sql
---   3) sql/03_triggers.sql
---   4) sql/04_procedures.sql   <- este archivo
---
--- Cobertura por lineamiento:
---   3a Registrar nueva reserva                   -> sp_registrar_reserva
---   3b Actualizar estado de una habitacion       -> sp_cambiar_estado_habitacion
---   3c Factura rapida (acelerar check-out)       -> sp_checkout_rapido
---   3d Verificacion de disponibilidad            -> sp_verificar_disponibilidad
---   3e Registro de servicios utilizados          -> sp_registrar_servicio
---   3f Cancelar reserva y liberar habitacion     -> sp_cancelar_reserva
---   3g Actualizar datos de cliente frecuente VIP -> sp_actualizar_cliente_vip
---   3h Listar clientes hospedados en tiempo real -> sp_listar_hospedados
---   3i Reporte de ingresos por mes               -> sp_reporte_ingresos_mes
---   3j Upgrade automatico de habitacion VIP      -> sp_upgrade_vip
--- =====================================================================
-
 USE hotel_alpheus;
 
 DELIMITER $$
 
 -- ---------------------------------------------------------------------
--- 3d) sp_verificar_disponibilidad (se define primero porque sp_registrar_reserva lo invoca)
---     Verifica que la habitacion no este en mantenimiento/fuera de servicio
---     y que no exista una reservacion no-cancelada que se solape con el rango.
+-- 3d) sp_verificar_disponibilidad
+--     Verifica que la habitacion no este en mantenimiento/fuera de servicio y que no exista una reservacion no-cancelada que se solape con el rango.
 --     OUT p_disponible: 1 = disponible, 0 = no.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_verificar_disponibilidad$$
@@ -75,9 +49,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3a) sp_registrar_reserva
---     Crea reservacion + reservacion_habitacion en una sola transaccion.
---     Valida disponibilidad antes de insertar (llama a sp_verificar_disponibilidad).
---     Calcula subtotal con tarifa actual de la habitacion y aplica IVA 16% al total.
+--     Crea reservacion + reservacion_habitacion en una sola transaccion. Valida disponibilidad antes de insertar (llama a sp_verificar_disponibilidad). Calcula subtotal con tarifa actual de la habitacion y aplica IVA 16% al total.
 --     OUT p_id_reservacion: id generado.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_registrar_reserva$$
@@ -136,10 +108,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3b) sp_cambiar_estado_habitacion
---     Cambia el estado de la habitacion y deja contexto para que el
---     trigger trg_habitacion_after_update registre quien hizo el cambio
---     en bitacora_habitacion. Las variables de sesion @bitacora_*
---     se limpian al final.
+--     Cambia el estado de la habitacion y deja contexto para que el trigger trg_habitacion_after_update registre quien hizo el cambio en bitacora_habitacion. Las variables de sesion @bitacora_* se limpian al final.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_cambiar_estado_habitacion$$
 CREATE PROCEDURE sp_cambiar_estado_habitacion(
@@ -167,10 +136,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3c) sp_checkout_rapido
---     Cierra la estancia (set checkout_real), cierra la cuenta, genera
---     factura con totales reconciliados y marca la reservacion como
---     'completada'. El trigger trg_estancia_after_update se encarga de
---     pasar la habitacion a 'limpieza'.
+--     Cierra la estancia (set checkout_real), cierra la cuenta, genera factura con totales reconciliados y marca la reservacion como 'completada'. El trigger trg_estancia_after_update se encarga de pasar la habitacion a 'limpieza'.
 --     OUT p_id_factura: id de la factura generada.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_checkout_rapido$$
@@ -239,8 +205,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3e) sp_registrar_servicio
---     Registra un consumo de servicio para una reservacion activa.
---     Si la cuenta esta abierta, agrega tambien una linea a detalle_cuenta.
+--     Registra un consumo de servicio para una reservacion activa. Si la cuenta esta abierta, agrega tambien una linea a detalle_cuenta.
 --     OUT p_id_consumo: id del consumo creado.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_registrar_servicio$$
@@ -312,9 +277,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3f) sp_cancelar_reserva
---     Inserta un registro en cancelacion. Los triggers trg_cancelacion_*
---     calculan la penalizacion (2j), marcan reservacion como 'cancelada'
---     y liberan la habitacion si aplica.
+--     Inserta un registro en cancelacion. Los triggers trg_cancelacion_* calculan la penalizacion (2j), marcan reservacion como 'cancelada' y liberan la habitacion si aplica.
 --     OUT p_penalizacion: el monto calculado.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_cancelar_reserva$$
@@ -348,10 +311,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3g) sp_actualizar_cliente_vip
---     Recalcula nivel_vip, puntos_acumulados y contador_reservas a
---     partir del historial real (COUNT/SUM sobre reservacion).
---     Usado cuando hay dudas sobre los contadores mantenidos por trigger
---     o despues de operaciones masivas.
+--     Recalcula nivel_vip, puntos_acumulados y contador_reservas a partir del historial real (COUNT/SUM sobre reservacion). Usado cuando hay dudas sobre los contadores mantenidos por trigger o despues de operaciones masivas.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_actualizar_cliente_vip$$
 CREATE PROCEDURE sp_actualizar_cliente_vip(
@@ -428,8 +388,7 @@ END$$
 
 -- ---------------------------------------------------------------------
 -- 3i) sp_reporte_ingresos_mes
---     Reporte de ingresos del mes/anio indicados, desglosado por estado
---     de factura para dar visibilidad al equipo de finanzas.
+--     Reporte de ingresos del mes/anio indicados, desglosado por estado de factura para dar visibilidad al equipo de finanzas.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_reporte_ingresos_mes$$
 CREATE PROCEDURE sp_reporte_ingresos_mes(
@@ -455,9 +414,7 @@ END$$
 -- ---------------------------------------------------------------------
 -- 3j) sp_upgrade_vip
 --     Upgrade automatico de habitacion para clientes oro/platino.
---     Busca la siguiente categoria de mayor precio_base que tenga al
---     menos una habitacion disponible en el rango de la reservacion.
---     Actualiza reservacion_habitacion in-place. OUT NULL si no hay upgrade.
+--     Busca la siguiente categoria de mayor precio_base que tenga al menos una habitacion disponible en el rango de la reservacion. Actualiza reservacion_habitacion in-place. OUT NULL si no hay upgrade.
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_upgrade_vip$$
 CREATE PROCEDURE sp_upgrade_vip(

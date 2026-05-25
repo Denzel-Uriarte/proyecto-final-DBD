@@ -1,42 +1,8 @@
--- =====================================================================
--- Hotel Alpheus - Seed (datos ficticios deterministicos)
--- CETYS Universidad - Diseno de Bases de Datos 2026-1, Proyecto Final
--- =====================================================================
--- Cumple lineamiento: >=50 tuplas por tabla.
--- Locale: ~70% Mexico + ~30% internacional.
--- Fecha ancla: 2026-05-15 (queries "ultimo mes/ano" reproducibles entre corridas).
--- Pre-requisito: ejecutar primero sql/01_schema.sql.
---
--- Distribucion de reservaciones (120 total):
---   - 50 completadas (-> estancia + cuenta + factura + pago)
---   - 50 canceladas  (-> cancelacion)
---   - 10 check_in    (estancia activa, vista "huespedes ahora mismo")
---   - 10 futuras     (5 confirmadas + 5 pendientes, vista "proyeccion 7 dias")
---
--- Sesgo de IDs deliberado para alimentar las 30 queries del lineamiento:
---   - id_huesped 1..5  -> 8 completadas + 4 canceladas c/u -> Top clientes,
---                         "mas de 5 reservas" y "mas de 2 cancelaciones".
---   - id_huesped 6..10 -> 2 completadas
---   - id_huesped 11..40-> 1 cancelacion c/u
---   - id_huesped 31..40-> +1 futura
---   - id_huesped 41..50-> 1 check_in (alimentan estancias activas).
---
--- Triggers/procedures aun no existen al ejecutar este seed.
--- Los CHECK constraints y FKs si se validan; tras 03_triggers.sql el
--- estado de la BD sigue siendo coherente con las reglas de negocio.
--- =====================================================================
-
 USE hotel_alpheus;
 
 SET @ANCHOR := DATE '2026-05-15';
 SET SESSION cte_max_recursion_depth = 1000;
 
--- ---------------------------------------------------------------------
--- 1. CATALOGOS
--- ---------------------------------------------------------------------
-
--- 1.1 categoria_habitacion: 8 tipos base x ~6 variantes (vista, piso, uso) = 50.
---     Las variantes representan diferenciacion real de inventario.
 INSERT INTO categoria_habitacion (nombre, descripcion, precio_base) VALUES
  ('Standard Vista Ciudad Bajo',     'Standard 28m2, king, urbana, pisos 1-2',                 1800.00),
  ('Standard Vista Ciudad Alto',     'Standard 28m2, king, urbana, pisos 3-4',                 1950.00),
@@ -89,7 +55,7 @@ INSERT INTO categoria_habitacion (nombre, descripcion, precio_base) VALUES
  ('Bungalow Jardin',                'Bungalow 65m2, king, terraza propia con jardin',         5500.00),
  ('Cabana Alberca',                 'Cabana 55m2, king, acceso directo a alberca',            5200.00);
 
--- 1.2 tipo_servicio: 30 internos + 20 externos = 50.
+
 INSERT INTO tipo_servicio (nombre, categoria) VALUES
  ('Spa Masaje','interno'),('Spa Facial','interno'),('Spa Aromaterapia','interno'),
  ('Spa Sauna','interno'),('Spa Jacuzzi','interno'),('Spa Corporal','interno'),
@@ -116,7 +82,7 @@ INSERT INTO tipo_servicio (nombre, categoria) VALUES
  ('Helitour Tepic','externo'),('Parque Acuatico Splash','externo'),
  ('Traslado Aeropuerto Tepic','externo'),('Traslado Estadio Coloso','externo');
 
--- 1.3 servicio: 50 servicios, uno por tipo.
+
 INSERT INTO servicio (id_tipo_servicio, nombre_servicio, precio, disponible) VALUES
  ( 1,'Masaje relajante 60min',    1200.00,TRUE), ( 2,'Facial hidratante',         950.00,TRUE),
  ( 3,'Aromaterapia 45min',         850.00,TRUE), ( 4,'Sesion sauna 30min',        350.00,TRUE),
@@ -144,7 +110,7 @@ INSERT INTO servicio (id_tipo_servicio, nombre_servicio, precio, disponible) VAL
  (47,'Helitour panoramico 20min', 3800.00,TRUE), (48,'Entrada Parque Acuatico',   650.00,TRUE),
  (49,'Traslado ida-vuelta aero',   750.00,TRUE), (50,'Traslado al Estadio',       220.00,TRUE);
 
--- 1.4 evento_temporada: 50 eventos cubriendo ~3 anos.
+
 INSERT INTO evento_temporada (nombre_evento, fecha_inicio, fecha_fin) VALUES
  ('Semana Santa 2024',                '2024-03-24','2024-03-30'),
  ('Verano 2024',                      '2024-06-15','2024-08-31'),
@@ -197,7 +163,7 @@ INSERT INTO evento_temporada (nombre_evento, fecha_inicio, fecha_fin) VALUES
  ('Maratones Nayarit 2026',           '2026-10-19','2026-10-25'),
  ('Convencion Beisbol Mexicano 2026', '2026-07-10','2026-07-25');
 
--- 1.5 paquete_promocional: 50 paquetes, uno por evento.
+
 INSERT INTO paquete_promocional (id_evento, descripcion, precio, inicio_validez, fin_validez) VALUES
  ( 1,'Paquete Semana Santa 2024 - 3 noches + spa',                 8500.00,'2024-03-24','2024-03-30'),
  ( 2,'Paquete Verano 2024 - 5 noches + alberca + tour',           14500.00,'2024-06-15','2024-08-31'),
@@ -250,7 +216,7 @@ INSERT INTO paquete_promocional (id_evento, descripcion, precio, inicio_validez,
  (49,'Paquete Maraton 26 - 2 noches + numero corredor',            6800.00,'2026-10-19','2026-10-25'),
  (50,'Paquete Convencion Beisbol 26 - 5 noches + entradas',       18500.00,'2026-07-10','2026-07-25');
 
--- 1.6 detalle_paquete_promocional: 50 vinculaciones paquete-servicio.
+
 INSERT INTO detalle_paquete_promocional (id_paquete_promocional, id_servicio, cantidad_incluida) VALUES
  ( 1, 1,2.00),( 2,28,5.00),( 3,11,3.00),( 4,32,1.00),( 5,32,1.00),
  ( 6,11,3.00),( 7,13,1.00),( 8,18,2.00),( 9,13,1.00),(10,32,1.00),
@@ -263,11 +229,7 @@ INSERT INTO detalle_paquete_promocional (id_paquete_promocional, id_servicio, ca
  (41,13,1.00),(42,28,5.00),(43,28,5.00),(44,13,1.00),(45,13,1.00),
  (46,15,1.00),(47,15,1.00),(48,10,1.00),(49,10,1.00),(50,31,1.00);
 
--- ---------------------------------------------------------------------
--- 2. MAESTROS (derivados con CTE recursiva para mantener compacto)
--- ---------------------------------------------------------------------
 
--- 2.1 empleado: 50 con departamentos, roles, salarios y bonos variados.
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO empleado (nombres, apellidos, rol, telefono, salario, bono, activo, departamento)
 SELECT
@@ -295,18 +257,16 @@ SELECT
       'spa','gimnasio','mantenimiento','seguridad','entretenimiento')
 FROM seq;
 
--- 2.2 usuario: 50 usuarios del sistema con roles distribuidos.
+-- Usuarios y contrasenas random
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO usuario (email, password, rol)
 SELECT
   CONCAT('user', LPAD(n, 3, '0'), '@hotelalpheus.com'),
-  -- bcrypt-like placeholder; en produccion debe ser hash real.
   CONCAT('$2b$12$placeholder', LPAD(n, 3, '0'), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
   ELT(((n-1) % 5) + 1, 'admin','recepcion','finanzas','gerencia','reportes')
 FROM seq;
 
--- 2.3 huesped: 50 huespedes (todos seran tambien facturadores 1:1).
---     70% MX, 30% internacional.
+-- Huespedes random, mexicanos e internacionales
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO huesped (nombres, apellidos, fecha_nacimiento, email, pais_origen, sexo)
 SELECT
@@ -331,7 +291,6 @@ SELECT
   CASE WHEN n % 2 = 0 THEN 'F' ELSE 'M' END
 FROM seq;
 
--- 2.4 huesped_facturador: 50, uno por huesped. RFC pseudo-coherente.
 INSERT INTO huesped_facturador (id_huesped, direccion, telefono_casa, telefono_celular, email, rfc, procedencia, numero_reservas)
 SELECT
   h.id_huesped,
@@ -343,7 +302,7 @@ SELECT
   CONCAT('311-700-', LPAD((h.id_huesped * 113) % 10000, 4, '0')),
   CONCAT('311-800-', LPAD((h.id_huesped * 131) % 10000, 4, '0')),
   CONCAT('facturador', LPAD(h.id_huesped, 3, '0'), '@factura.com'),
-  -- RFC: 4 letras (2 apellido + 2 nombre) + YYMMDD + 3 chars deterministicos.
+  -- RFC random
   CONCAT(
     UPPER(LEFT(REPLACE(h.apellidos, ' ', ''), 2)),
     UPPER(LEFT(REPLACE(h.nombres,   ' ', ''), 2)),
@@ -357,11 +316,11 @@ SELECT
 FROM huesped h
 ORDER BY h.id_huesped;
 
--- 2.5 cliente_vip: 50, todos los facturadores entran al programa (lineamiento 2d).
+
 INSERT INTO cliente_vip (id_huesped_facturador, nivel_vip, puntos_acumulados, contador_reservas, fecha_registro)
 SELECT
   hf.id_huesped_facturador,
-  -- ids 1..5 son los clientes "mas reservadores"; les damos niveles altos.
+  -- Clientes VIP random, platino, oro, plata o bronce
   CASE
     WHEN hf.id_huesped_facturador <=  5 THEN 'platino'
     WHEN hf.id_huesped_facturador <= 10 THEN 'oro'
@@ -374,7 +333,7 @@ SELECT
 FROM huesped_facturador hf
 ORDER BY hf.id_huesped_facturador;
 
--- 2.6 habitacion: 50, una por categoria. Numeracion piso-secuencia.
+-- Habitaciones random, una por categoria
 INSERT INTO habitacion (id_categoria, numero_habitacion, piso, precio, estado)
 SELECT
   c.id_categoria,
@@ -385,7 +344,7 @@ SELECT
 FROM categoria_habitacion c
 ORDER BY c.id_categoria;
 
--- 2.7 bono_empleado: 50, uno por empleado, fechas distribuidas en 18 meses pasados.
+-- Bonos de empleado random, uno por empleado, fechas distribuidas en 18 meses pasados
 INSERT INTO bono_empleado (id_empleado, monto, fecha_hora, motivo)
 SELECT
   e.id_empleado,
@@ -405,12 +364,7 @@ SELECT
 FROM empleado e
 ORDER BY e.id_empleado;
 
--- ---------------------------------------------------------------------
--- 3. RESERVACIONES (120 en 4 bloques con sesgo intencional)
--- ---------------------------------------------------------------------
-
--- 3.1.A: 50 COMPLETADAS. Ids 1..5 acumulan 8 c/u (top clientes), 6..10 acumulan 2 c/u.
---        Fechas: ANCHOR - {41..580} dias. Noches: 1..7 (((n*3) % 7) + 1, no n*7 que siempre da 1).
+-- Reservaciones random, completadas, canceladas, check_in y futuras
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO reservacion (id_huesped, id_huesped_facturador, id_usuario, fecha_inicio, fecha_salida, estado, metodo, subtotal, total)
 SELECT
@@ -425,8 +379,7 @@ SELECT
   0.00, 0.00
 FROM seq;
 
--- 3.1.B: 50 CANCELADAS. Ids 1..5 con 4 c/u (alimentan query "mas de 2 cancelaciones").
---        Ids 11..40 con 1 c/u (cobertura amplia).
+-- Reservaciones random, canceladas
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO reservacion (id_huesped, id_huesped_facturador, id_usuario, fecha_inicio, fecha_salida, estado, metodo, subtotal, total)
 SELECT
@@ -621,12 +574,8 @@ FROM reservacion r
 JOIN reservacion_habitacion rh ON rh.id_reservacion = r.id_reservacion
 WHERE r.estado = 'cancelada';
 
--- ---------------------------------------------------------------------
--- 5. CONSUMOS, BITACORA, CALIDAD
--- ---------------------------------------------------------------------
 
--- 5.1 consumo_servicio: 100 consumos (2 por estancia completada).
---     Fechas dentro del rango de la estancia.
+-- Consumo de servicio random, 2 por estancia completada
 INSERT INTO consumo_servicio (id_reservacion, id_huesped, id_servicio, id_empleado, cantidad, precio_unitario, fecha_hora)
 SELECT
   r.id_reservacion,
@@ -640,7 +589,7 @@ FROM reservacion r
 JOIN servicio s ON s.id_servicio = ((r.id_reservacion * 3) % 50) + 1
 WHERE r.estado IN ('completada','check_in');
 
--- Segundo consumo por estancia (servicio distinto).
+-- Segundo consumo por estancia (servicio distinto)
 INSERT INTO consumo_servicio (id_reservacion, id_huesped, id_servicio, id_empleado, cantidad, precio_unitario, fecha_hora)
 SELECT
   r.id_reservacion,
@@ -654,8 +603,7 @@ FROM reservacion r
 JOIN servicio s ON s.id_servicio = ((r.id_reservacion * 13) % 50) + 1
 WHERE r.estado IN ('completada','check_in');
 
--- 5.2 bitacora_habitacion: 2 entradas por estancia (check-in y check-out)
---     = 120 entradas. Las del check_in actual solo tienen evento de ingreso.
+-- Bitacora de habitacion, 2 entradas por estancia (check-in y check-out)
 INSERT INTO bitacora_habitacion (id_habitacion, id_empleado, id_reservacion, estado_anterior, estado_nuevo, fecha_hora)
 SELECT
   e.id_habitacion, e.id_empleado, e.id_reservacion,
@@ -669,7 +617,7 @@ SELECT
 FROM estancia e
 WHERE e.fecha_hora_checkout_real IS NOT NULL;
 
--- 5.3 queja: 50, distribuidas en reservaciones completadas y canceladas.
+-- Queja random, distribuidas en reservaciones completadas y canceladas
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO queja (id_huesped, id_reservacion, id_empleado, receptor, queja, fecha_queja, resolucion_queja, fecha_resolucion, departamento)
 SELECT
@@ -701,7 +649,7 @@ FROM seq
 JOIN reservacion r ON r.id_reservacion = n
 WHERE r.estado IN ('completada','cancelada');
 
--- 5.4 satisfaccion: 50, una por reservacion completada (con calificacion).
+-- Satisfaccion random, una por reservacion completada (con calificacion)
 WITH RECURSIVE seq AS (SELECT 1 AS n UNION ALL SELECT n+1 FROM seq WHERE n < 50)
 INSERT INTO satisfaccion (id_huesped, id_reservacion, id_empleado, departamento, receptor, comentarios, fecha_satisfaccion, calificacion)
 SELECT
@@ -732,11 +680,8 @@ FROM seq
 JOIN reservacion r ON r.id_reservacion = n
 WHERE r.estado = 'completada';
 
--- ---------------------------------------------------------------------
--- 6. RECONCILIACION DE TOTALES Y CONTADORES (verdad emerge desde los datos)
--- ---------------------------------------------------------------------
 
--- 6.1 Subtotal/total por reservacion = suma de reservacion_habitacion + consumo_servicio.
+-- Subtotal/total por reservacion = suma de reservacion_habitacion + consumo_servicio
 UPDATE reservacion r
 LEFT JOIN (SELECT id_reservacion, SUM(subtotal) AS s FROM reservacion_habitacion GROUP BY id_reservacion) rh
        ON rh.id_reservacion = r.id_reservacion
@@ -745,7 +690,7 @@ LEFT JOIN (SELECT id_reservacion, SUM(cantidad * precio_unitario) AS s FROM cons
 SET r.subtotal = COALESCE(rh.s, 0) + COALESCE(cs.s, 0),
     r.total    = ROUND((COALESCE(rh.s, 0) + COALESCE(cs.s, 0)) * 1.16, 2);
 
--- 6.2 cuenta.subtotal/total = suma de detalle_cuenta.
+-- Cuenta subtotal/total = suma de detalle_cuenta
 UPDATE cuenta c
 JOIN (
   SELECT id_cuenta,
@@ -756,14 +701,14 @@ JOIN (
 SET c.subtotal = d.subt,
     c.total    = d.tot;
 
--- 6.3 factura.subtotal/impuestos/total derivados de la cuenta.
+-- Factura subtotal/impuestos/total = suma de detalle_cuenta
 UPDATE factura f
 JOIN cuenta c ON c.id_cuenta = f.id_cuenta
 SET f.subtotal  = c.subtotal,
     f.impuestos = ROUND(c.subtotal * 0.16, 2),
     f.total     = c.total;
 
--- 6.4 pago.monto = factura.total (cuando aplica).
+-- Pago monto = factura total
 UPDATE pago p
 JOIN factura f ON f.id_factura = p.id_factura
 SET p.monto = CASE WHEN p.estado = 'completado' THEN f.total
@@ -771,13 +716,13 @@ SET p.monto = CASE WHEN p.estado = 'completado' THEN f.total
                    ELSE ROUND(f.total * 0.50, 2)
               END;
 
--- 6.5 huesped_facturador.numero_reservas = COUNT(reservaciones).
+-- Huesped facturador numero_reservas = numero de reservaciones
 UPDATE huesped_facturador hf
 LEFT JOIN (SELECT id_huesped_facturador, COUNT(*) AS c FROM reservacion GROUP BY id_huesped_facturador) r
        ON r.id_huesped_facturador = hf.id_huesped_facturador
 SET hf.numero_reservas = COALESCE(r.c, 0);
 
--- 6.6 cliente_vip.contador_reservas = COUNT(reservaciones efectivas: no canceladas).
+-- Cliente vip contador_reservas = numero de reservaciones efectivas: no canceladas
 UPDATE cliente_vip cv
 JOIN huesped_facturador hf ON hf.id_huesped_facturador = cv.id_huesped_facturador
 LEFT JOIN (
@@ -788,21 +733,9 @@ LEFT JOIN (
 ) r ON r.id_huesped_facturador = hf.id_huesped_facturador
 SET cv.contador_reservas = COALESCE(r.c, 0);
 
--- 6.7 habitacion.estado refleja las 10 estancias activas (check_in actual).
+-- Habitacion estado refleja las estancias activas (check_in actual)
 UPDATE habitacion h
 JOIN estancia e ON e.id_habitacion = h.id_habitacion AND e.fecha_hora_checkout_real IS NULL
 SET h.estado = 'ocupada';
 
--- ---------------------------------------------------------------------
--- 7. VERIFICACION DE MINIMOS (consultas de sanity check)
--- ---------------------------------------------------------------------
--- Ejecutar manualmente despues de cargar:
---
--- SELECT table_name, table_rows FROM information_schema.tables
--- WHERE table_schema = 'hotel_alpheus'
--- ORDER BY table_name;
---
--- Toda tabla debe reportar >= 50 filas excepto las que dependen de
--- reservaciones con estados especificos (estancia=60, cuenta=60,
--- factura=50, pago=50, cancelacion=50, etc.)
--- =====================================================================
+

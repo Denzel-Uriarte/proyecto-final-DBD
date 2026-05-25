@@ -1,27 +1,3 @@
--- Hotel Alpheus - Consultas de reporteo (30)
--- Autores: Denzel Uriarte (34684), Jorge Lopez (34323), Oscar Medina (34204)
--- Profesor: Ricardo Martinez
---
--- Este archivo cubre los 30 reportes solicitados en la seccion final del
--- lineamiento ("Relacion de consultas para el Sistema de Control de
--- Reservaciones de Hotel"). Las consultas estan ordenadas y numeradas
--- exactamente como en el documento.
---
--- Premisa de evaluacion:
---   * El seed (02_seed.sql) usa @ANCHOR = '2026-05-15' como pivote temporal.
---   * Las reservas se distribuyen en cuatro bloques:
---       50 completadas (ANCHOR-580 .. ANCHOR-41)
---       50 canceladas  (ANCHOR-465 .. ANCHOR-24)
---       10 activas     (ANCHOR-9   .. ANCHOR+11)
---       10 futuras     (ANCHOR+12  .. ANCHOR+75)
---   * Con CURRENT_DATE proximo a ANCHOR (mayo 2026) los reportes "hoy",
---     "ultimo mes", "ultimo ano" y "proximos 7 dias" devuelven resultados.
---
--- Convencion: cada consulta se autocontiene en parametros. Se prefiere
--- CURRENT_DATE sobre fechas hardcoded para permitir ejecutar contra datos
--- mas recientes; quien revise puede sobreescribir @hoy si necesita anclar
--- a la fecha del seed (SET @hoy := '2026-05-20').
---
 -- Para ejecutar todo el archivo: source sql/05_views_queries.sql
 -- Para ejecutar una sola consulta: copiar el bloque correspondiente.
 
@@ -35,13 +11,10 @@ SET @desde_ano  := DATE_SUB(@hoy, INTERVAL 1 YEAR);
 SET @hasta_ano  := @hoy;
 
 
--- =====================================================================
 -- 1) Habitaciones disponibles en un rango de fechas
---    Devuelve las habitaciones que (a) no estan fuera de servicio ni en
---    mantenimiento y (b) no tienen ninguna reservacion pendiente,
+--    Devuelve las habitaciones que no estan fuera de servicio ni en
+--    mantenimiento y no tienen ninguna reservacion pendiente,
 --    confirmada o con check_in cuyo rango se solape con [@desde, @hasta].
---    Parametros: @desde, @hasta (por defecto: hoy .. hoy+1).
--- =====================================================================
 SET @desde := @hoy;
 SET @hasta := DATE_ADD(@hoy, INTERVAL 1 DAY);
 
@@ -68,11 +41,8 @@ WHERE h.estado IN ('disponible', 'limpieza')
 ORDER BY ch.nombre, h.numero_habitacion;
 
 
--- =====================================================================
 -- 2) Clientes hospedados (check-in vigente)
---    Estancias sin checkout real. Muestra fecha de ingreso/salida,
---    nombre del huesped y tipo de habitacion.
--- =====================================================================
+--    Estancias sin checkout real. Muestra fecha de ingreso/salida, nombre del huesped y tipo de habitacion.
 SELECT
   e.id_estancia,
   CONCAT(h.nombres, ' ', h.apellidos)            AS huesped,
@@ -89,11 +59,8 @@ WHERE e.fecha_hora_checkout_real IS NULL
 ORDER BY e.fecha_hora_checkin DESC;
 
 
--- =====================================================================
 -- 3) Clientes con reserva en una fecha y sin check-in
 --    Reservas que se solapan con @fecha pero todavia no tienen estancia.
---    Parametros: @fecha (por defecto, hoy).
--- =====================================================================
 SET @fecha := @hoy;
 
 SELECT
@@ -117,12 +84,8 @@ WHERE r.estado IN ('pendiente', 'confirmada')
 ORDER BY r.fecha_inicio;
 
 
--- =====================================================================
 -- 4) Ocupacion de habitaciones por tipo en una fecha
---    Para cada categoria muestra total de habitaciones, ocupadas en
---    @fecha y porcentaje de ocupacion.
---    Parametros: @fecha (por defecto, hoy).
--- =====================================================================
+--    Para cada categoria muestra total de habitaciones, ocupadas en @fecha y porcentaje de ocupacion.
 SET @fecha := @hoy;
 
 SELECT
@@ -151,10 +114,8 @@ GROUP BY ch.id_categoria, ch.nombre
 ORDER BY porcentaje_ocupacion DESC, ch.nombre;
 
 
--- =====================================================================
 -- 5) Proyeccion de reservas en los proximos 7 dias
 --    Reservas confirmadas o pendientes cuyo check-in cae en (@hoy,@hoy+7].
--- =====================================================================
 SELECT
   r.id_reservacion,
   CONCAT(h.nombres, ' ', h.apellidos)            AS huesped,
@@ -173,10 +134,8 @@ WHERE r.estado IN ('pendiente', 'confirmada')
 ORDER BY r.fecha_inicio, r.id_reservacion;
 
 
--- =====================================================================
 -- 6) Reservas canceladas en el ultimo mes
 --    Rango por defecto: @hoy - 30 dias .. @hoy.
--- =====================================================================
 SELECT
   c.id_cancelacion,
   c.id_reservacion,
@@ -194,11 +153,9 @@ WHERE c.fecha_cancelacion >= @desde_mes
 ORDER BY c.fecha_cancelacion DESC;
 
 
--- =====================================================================
 -- 7) Clientes con mas de 5 reservas (potenciales VIP)
 --    Conteo real desde reservacion (ignorando canceladas). Se devuelve
 --    tambien el cache numero_reservas mantenido por trigger.
--- =====================================================================
 SELECT
   hf.id_huesped_facturador,
   CONCAT(h.nombres, ' ', h.apellidos)            AS cliente,
@@ -216,10 +173,8 @@ HAVING reservas_reales > 5
 ORDER BY reservas_reales DESC;
 
 
--- =====================================================================
 -- 8) Servicios mas utilizados en un rango de fechas
 --    Por defecto: ultimo mes.
--- =====================================================================
 SELECT
   s.id_servicio,
   s.nombre_servicio,
@@ -237,11 +192,9 @@ GROUP BY s.id_servicio, s.nombre_servicio, ts.nombre, ts.categoria
 ORDER BY veces_consumido DESC, importe_total DESC;
 
 
--- =====================================================================
 -- 9) Ingresos generados por rango de fechas (reporte rapido de finanzas)
 --    Suma de pagos completados; tambien se reporta el monto pendiente y
 --    reembolsado para una vision completa.
--- =====================================================================
 SELECT
   p.estado                                       AS estado_pago,
   COUNT(*)                                       AS num_pagos,
@@ -253,11 +206,9 @@ GROUP BY p.estado
 ORDER BY FIELD(p.estado, 'completado', 'pendiente', 'reembolsado', 'fallido');
 
 
--- =====================================================================
 -- 10) Facturas emitidas en un rango y monto cobrado
 --     Devuelve cada factura con el total cobrado real (suma de pagos
 --     completados asociados).
--- =====================================================================
 SELECT
   f.id_factura,
   f.fecha_emision,
@@ -278,9 +229,7 @@ WHERE f.fecha_emision >= @desde_mes
 ORDER BY f.fecha_emision DESC, f.id_factura DESC;
 
 
--- =====================================================================
 -- 11) Top 10 mejores clientes del hotel (por monto total facturado)
--- =====================================================================
 SELECT
   hf.id_huesped_facturador,
   CONCAT(h.nombres, ' ', h.apellidos)            AS cliente,
@@ -299,11 +248,9 @@ ORDER BY ingreso_total DESC, reservas DESC
 LIMIT 10;
 
 
--- =====================================================================
 -- 12) Habitaciones no ocupadas en el ultimo mes
 --     Habitaciones que no aparecen en ninguna estancia con check-in en
 --     [@desde_mes, @hasta_mes].
--- =====================================================================
 SELECT
   h.id_habitacion,
   h.numero_habitacion,
@@ -322,10 +269,8 @@ WHERE NOT EXISTS (
 ORDER BY ch.nombre, h.numero_habitacion;
 
 
--- =====================================================================
 -- 13) Duracion promedio de estancias por tipo de habitacion
 --     Usa checkout real cuando existe, programado en caso contrario.
--- =====================================================================
 SELECT
   ch.nombre                                      AS categoria,
   COUNT(*)                                       AS estancias,
@@ -348,9 +293,7 @@ GROUP BY ch.id_categoria, ch.nombre
 ORDER BY noches_promedio DESC;
 
 
--- =====================================================================
 -- 14) Servicios no utilizados en el ultimo mes
--- =====================================================================
 SELECT
   s.id_servicio,
   s.nombre_servicio,
@@ -369,10 +312,8 @@ WHERE NOT EXISTS (
 ORDER BY ts.categoria, ts.nombre, s.nombre_servicio;
 
 
--- =====================================================================
 -- 15) Reservas por tipo de habitacion en el ultimo ano
 --     Para detectar demanda por categoria. Rango por defecto: 365 dias.
--- =====================================================================
 SELECT
   ch.nombre                                      AS categoria,
   COUNT(DISTINCT r.id_reservacion)               AS reservas,
@@ -389,11 +330,9 @@ GROUP BY ch.id_categoria, ch.nombre
 ORDER BY reservas DESC;
 
 
--- =====================================================================
 -- 16) Clientes que cancelaron mas de 2 reservas
 --     Detalle por cancelacion: fecha de reserva, tipo de habitacion
 --     y motivo registrado.
--- =====================================================================
 SELECT
   CONCAT(h.nombres, ' ', h.apellidos)            AS cliente,
   hf.email,
@@ -423,9 +362,7 @@ ORDER BY cuenta_cancelaciones.total_cancelaciones DESC,
          cliente, c.fecha_cancelacion DESC;
 
 
--- =====================================================================
 -- 17) Numero de reservas por pais de origen
--- =====================================================================
 SELECT
   COALESCE(h.pais_origen, '(sin pais)')          AS pais_origen,
   COUNT(*)                                       AS reservas,
@@ -437,11 +374,9 @@ GROUP BY h.pais_origen
 ORDER BY reservas DESC, pais_origen;
 
 
--- =====================================================================
 -- 18) Promedio de facturacion diaria en un rango
 --     Primero suma por dia, luego saca promedio sobre los dias con
 --     emision. Tambien reporta total y desviacion estandar muestral.
--- =====================================================================
 SELECT
   MIN(diaria.fecha_emision)                      AS desde,
   MAX(diaria.fecha_emision)                      AS hasta,
@@ -459,9 +394,7 @@ FROM (
 ) AS diaria;
 
 
--- =====================================================================
 -- 19) Clientes sin email registrado
--- =====================================================================
 SELECT
   h.id_huesped,
   CONCAT(h.nombres, ' ', h.apellidos)            AS huesped,
@@ -477,10 +410,8 @@ WHERE h.email IS NULL OR h.email = ''
 ORDER BY rol, h.apellidos, h.nombres;
 
 
--- =====================================================================
 -- 20) Clientes VIP hospedados actualmente
 --     Cruza estancias sin checkout con cliente_vip.
--- =====================================================================
 SELECT
   v.id_vip,
   v.nivel_vip,
@@ -503,11 +434,8 @@ ORDER BY FIELD(v.nivel_vip, 'platino', 'oro', 'plata', 'bronce'),
          v.contador_reservas DESC;
 
 
--- =====================================================================
 -- 21) Auditoria de cambios de estado de una habitacion
 --     Cruza bitacora_habitacion con reservacion, huesped y empleado.
---     Parametro: @id_habitacion (default = 1).
--- =====================================================================
 SET @id_habitacion := 1;
 
 SELECT
@@ -530,10 +458,8 @@ WHERE b.id_habitacion = @id_habitacion
 ORDER BY b.fecha_hora DESC;
 
 
--- =====================================================================
 -- 22) Facturas sin pagar o pendientes de pago
 --     Pendientes o vencidas en el rango.
--- =====================================================================
 SELECT
   f.id_factura,
   f.fecha_emision,
@@ -555,12 +481,10 @@ WHERE f.estado_factura IN ('pendiente', 'vencida')
 ORDER BY f.estado_factura DESC, f.fecha_emision;
 
 
--- =====================================================================
 -- 23) Reservas expiradas que no se actualizaron
 --     Pendientes o confirmadas cuya fecha de salida ya paso. El evento
 --     evt_auto_expirar_reservas (2h) deberia cerrarlas; lo que aparezca
 --     aqui es una desviacion operativa.
--- =====================================================================
 SELECT
   r.id_reservacion,
   r.estado,
@@ -579,11 +503,9 @@ WHERE r.estado IN ('pendiente', 'confirmada')
 ORDER BY dias_vencido DESC;
 
 
--- =====================================================================
 -- 24) Porcentaje de ocupacion mensual clasificado por tipo de habitacion
 --     Calcula noches ocupadas (sumando duracion de cada estancia) sobre
 --     noches teoricas (numero_de_habitaciones * dias_del_mes).
--- =====================================================================
 SELECT
   DATE_FORMAT(e.fecha_hora_checkin, '%Y-%m')     AS mes,
   ch.nombre                                      AS categoria,
@@ -612,11 +534,9 @@ GROUP BY mes, ch.id_categoria, ch.nombre, hc.habitaciones_categoria
 ORDER BY mes, porcentaje DESC;
 
 
--- =====================================================================
 -- 25) Ingresos por tipo de habitacion en un rango
 --     Suma el subtotal de reservacion_habitacion (valor real cobrado
 --     por noche x noches) para reservas no canceladas.
--- =====================================================================
 SELECT
   ch.nombre                                      AS categoria,
   COUNT(DISTINCT r.id_reservacion)               AS reservas,
@@ -635,9 +555,7 @@ GROUP BY ch.id_categoria, ch.nombre
 ORDER BY ingreso_habitacion DESC;
 
 
--- =====================================================================
 -- 26) Empleados y bono acumulado en un rango
--- =====================================================================
 SELECT
   emp.id_empleado,
   CONCAT(emp.nombres, ' ', emp.apellidos)        AS empleado,
@@ -656,10 +574,8 @@ GROUP BY emp.id_empleado, empleado, emp.departamento, emp.rol, emp.salario
 ORDER BY bono_acumulado DESC, empleado;
 
 
--- =====================================================================
 -- 27) Servicios mas utilizados por clientes VIP
 --     Solo huespedes en cliente_vip.
--- =====================================================================
 SELECT
   s.id_servicio,
   s.nombre_servicio,
@@ -678,10 +594,8 @@ ORDER BY consumos DESC, importe_total DESC
 LIMIT 20;
 
 
--- =====================================================================
 -- 28) Quejas registradas por departamento en un rango
 --     Muestra total, tiempo medio de resolucion y porcentaje resueltas.
--- =====================================================================
 SELECT
   q.departamento,
   COUNT(*)                                       AS quejas,
@@ -698,10 +612,8 @@ GROUP BY q.departamento
 ORDER BY quejas DESC;
 
 
--- =====================================================================
 -- 29) Departamento con mejor rating de satisfaccion en un rango
 --     Devuelve el ranking; el primero es el de mejor rating.
--- =====================================================================
 SELECT
   s.departamento,
   COUNT(*)                                       AS encuestas,
@@ -716,11 +628,9 @@ GROUP BY s.departamento
 ORDER BY rating_promedio DESC, encuestas DESC;
 
 
--- =====================================================================
 -- 30) Habitaciones con mayor duracion de estancia clasificadas por tipo
 --     Devuelve la habitacion con estancia mas larga por categoria en el
 --     rango (ROW_NUMBER por categoria).
--- =====================================================================
 WITH rankeo AS (
   SELECT
     ch.nombre                                    AS categoria,
